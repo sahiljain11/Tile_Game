@@ -14,12 +14,13 @@ class PaintApp
     game.tileCords    ||= []
     game.tileQuantity ||= 6
     game.tileSize     ||= 50
-    game.tileSelected ||= 3
-
-    game.tempX ||= 50;
-    game.tempY ||= 500;
+    game.tileSelected ||= 1
+    game.tempX        ||= 50
+    game.tempY        ||= 500
+    game.speed        ||= 4
     
     determineTileCords unless game.tempX == 0
+
   end
 
   def determineTileCords
@@ -41,12 +42,13 @@ class PaintApp
       |x, y, order|
       [x, y, game.tileSize, game.tileSize, 'sprites/image' + order.to_s + ".png"]
     end
-
   end
 
   def print_title
-    outputs.labels << [ 640, 700, 'Paint!', 0, 1 ]
+    outputs.labels << [640, 700, 'Paint!', 7, 1]
     outputs.lines << horizontal_seperator(660, 0, 1280)
+    outputs.labels << [1050, 500, 'Current:', 3, 1]
+    outputs.sprites << [1110, 474, game.tileSize / 2, game.tileSize / 2, 'sprites/image' + game.tileSelected.to_s + ".png"]
   end
 
   def horizontal_seperator y, x, x2
@@ -59,33 +61,48 @@ class PaintApp
 
   def add_grid
     x, y, h, w = 640 - 500/2, 640 - 500, 500, 500
-    lines_h = 31
-    lines_v = 31
+    lines_h = 50
+    lines_v = 50
     
-    game.grid_border ||= [ x, y, h, w ]
-    game.grid_lines ||= draw_grid(x, y, h, w, lines_h, lines_v)
+    game.grid_border    ||= [ x, y, h, w ]
+    game.centerX        ||= x + (w / 2)
+    game.centerY        ||= y + (h / 2)
+    #game.centerLimitsX  ||= [(x / 2) + (w / 2), (x / 2) + w]
+    #game.centerLimitsY  ||= [y / 2]
+    game.grid_lines     ||= draw_grid(x / 2, y / 2, h + y, w + x, lines_h, lines_v)  
     game.filled_squares ||= []
 
     outputs.lines.concat game.grid_lines      
     outputs.borders << game.grid_border
-    outputs.sprites.concat game.filled_squares
+    #outputs.sprites.concat game.filled_squares
+    game.filled_squares.map do
+      |x, y, w, h, sprite|
+      if x > game.centerX - game.grid_border[3] / 2 && x < game.centerX + game.grid_border[3] / 2 &&
+         y > game.centerY - game.grid_border[2] / 2 && y < game.centerX + game.grid_border[2] / 2
+        outputs.sprites << [x, y, w, h, sprite]
+      end
+    end
   end
 
   def draw_grid x, y, h, w, lines_h, lines_v
-    grid = []    
+    grid = []
 
     curr_y = y #start at the bottom of the box
     dist_y = h / (lines_h + 1)
     lines_h.times do
       curr_y += dist_y
-      grid << horizontal_seperator(curr_y, x, x + w - 1)
+      grid << horizontal_seperator(curr_y, game.grid_border[0], w) unless
+        curr_y < game.centerY - game.grid_border[2] / 2 ||
+        curr_y > game.centerY + game.grid_border[2] / 2
     end
     
     curr_x = x #now start at the left of the box
     dist_x = w / (lines_v + 1)
     lines_v.times do 
       curr_x += dist_x
-      grid << vertical_seperator(curr_x, y + 1, y  + h)
+      grid << vertical_seperator(curr_x, game.grid_border[1], h) unless
+        curr_x < game.centerX - game.grid_border[3] / 2 ||
+        curr_x > game.centerX + game.grid_border[3] / 2
     end
 
     game.paint_grid ||= {"x" => x, "y" => y, "h" => h, "w" => w, "lines_h" => lines_h,
@@ -96,8 +113,20 @@ class PaintApp
   end
 
   def check_click
+    if inputs.keyboard.key_down.r
+      $dragon.reset
+    end
     if inputs.mouse.down #is mouse up or down?
       game.mouse_held = true
+      if inputs.mouse.position.x < game.grid_border[0]
+        game.tileCords.map do
+          |x, y, order|
+          if inputs.mouse.position.x >= x && inputs.mouse.position.x <= x + game.tileSize &&
+             inputs.mouse.position.y >= y && inputs.mouse.position.y <= y + game.tileSize
+            game.tileSelected = order
+          end
+        end
+      end
     elsif inputs.mouse.up
       game.mouse_held = false
       game.mouse_dragging = false
@@ -105,7 +134,8 @@ class PaintApp
 
     if game.mouse_held &&    #mouse needs to be down
        !inputs.mouse.click &&     #must not be first click
-       ((inputs.mouse.previous_click.point.x - inputs.mouse.position.x).abs > 15) # Need to move 15 pixels before "drag" 
+       ((inputs.mouse.previous_click.point.x - inputs.mouse.position.x).abs > 15 ||
+        (inputs.mouse.previous_click.point.y - inputs.mouse.position.y).abs > 15) # Need to move 15 pixels before "drag" 
       game.mouse_dragging = true
     end
     
@@ -115,6 +145,11 @@ class PaintApp
     elsif ((game.mouse_dragging) && (inputs.mouse.position.inside_rect? game.grid_border))
       search_lines(inputs.mouse.position, :drag)
     end
+
+    game.centerX += game.speed if inputs.keyboard.key_held.d
+    game.centerX -= game.speed if inputs.keyboard.key_held.a
+    game.centerY += game.speed if inputs.keyboard.key_held.w
+    game.centerY -= game.speed if inputs.keyboard.key_held.s
 
   end
 
@@ -147,7 +182,7 @@ class PaintApp
   def draw_buttons
     x, y, w, h = 390, 50, 240, 50
     game.clear_button        ||= game.new_entity(:button_with_fade)
-    game.clear_button.label  ||= [x + w.half, y + h.half + 10, "clear", 0, 1]
+    game.clear_button.label  ||= [x + w.half, y + h.half + 10, "Clear", 0, 1]
     game.clear_button.border ||= [x, y, w, h]
 
     if inputs.mouse.click && inputs.mouse.click.point.inside_rect?(game.clear_button.border)
@@ -165,7 +200,7 @@ class PaintApp
 
     x, y = 650, 50
     game.export_button        ||= game.new_entity(:button_with_fade)
-    game.export_button.label  ||= [x + w.half, y + h.half + 10, "export", 0, 1]
+    game.export_button.label  ||= [x + w.half, y + h.half + 10, "Export", 0, 1]
     game.export_button.border ||= [x, y, w, h]
 
     if inputs.mouse.click && inputs.mouse.click.point.inside_rect?(game.export_button.border)
