@@ -1,15 +1,51 @@
 class PaintApp
-  attr_accessor :inputs, :game, :outputs, :grid, :args
+  attr_accessor :inputs, :game, :outputs, :grid, :args, :state
   
   def tick
+    defaults
+    render
     print_title
     add_grid
     check_click
     draw_buttons
   end
 
+  def defaults
+    game.tileCords    ||= []
+    game.tileQuantity ||= 6
+    game.tileSize     ||= 50
+    game.tileSelected ||= 3
+
+    game.tempX ||= 50;
+    game.tempY ||= 500;
+    
+    determineTileCords unless game.tempX == 0
+  end
+
+  def determineTileCords
+    game.tempCounter ||= 1
+    game.tileQuantity.times do
+      game.tileCords += [[game.tempX, game.tempY, game.tempCounter]]
+      game.tempX += 75
+      game.tempCounter += 1
+      if game.tempX > 200
+        game.tempX = 50
+        game.tempY -= 75
+      end
+    end
+    game.tempX = 0
+  end
+
+  def render
+    outputs.sprites += game.tileCords.map do
+      |x, y, order|
+      [x, y, game.tileSize, game.tileSize, 'sprites/image' + order.to_s + ".png"]
+    end
+
+  end
+
   def print_title
-    args.outputs.labels << [ 640, 700, 'Paint!', 0, 1 ]
+    outputs.labels << [ 640, 700, 'Paint!', 0, 1 ]
     outputs.lines << horizontal_seperator(660, 0, 1280)
   end
 
@@ -32,7 +68,7 @@ class PaintApp
 
     outputs.lines.concat game.grid_lines      
     outputs.borders << game.grid_border
-    outputs.solids.concat game.filled_squares
+    outputs.sprites.concat game.filled_squares
   end
 
   def draw_grid x, y, h, w, lines_h, lines_v
@@ -92,7 +128,8 @@ class PaintApp
     point.x += game.paint_grid["x"]
     point.y += game.paint_grid["y"]
 
-    grid_box = [ point.x, point.y, game.paint_grid["dist_x"].ceil, game.paint_grid["dist_y"].ceil ]
+    grid_box = [ point.x, point.y, game.paint_grid["dist_x"].ceil, game.paint_grid["dist_y"].ceil,
+                 "sprites/image" + game.tileSelected.to_s + ".png"]
 
     if input_type == :click
       if game.filled_squares.include? grid_box
@@ -156,5 +193,6 @@ def tick args
   $paint_app.grid = args.grid
   $paint_app.args = args
   $paint_app.outputs = args.outputs
+  $paint_app.state = args.state
   $paint_app.tick
 end
