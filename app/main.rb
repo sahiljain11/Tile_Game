@@ -11,15 +11,26 @@ class PaintApp
   end
 
   def defaults
-    game.tileCords    ||= []
-    game.tileQuantity ||= 6
-    game.tileSize     ||= 50
-    game.tileSelected ||= 1
-    game.tempX        ||= 50
-    game.tempY        ||= 500
-    game.speed        ||= 4
-    
+    game.tileCords      ||= []
+    game.tileQuantity   ||= 6
+    game.tileSize       ||= 50
+    game.tileSelected   ||= 1
+    game.tempX          ||= 50
+    game.tempY          ||= 500
+    game.speed          ||= 4
+    game.centerX        ||= 4000
+    game.centerY        ||= 4000
+    game.originalCenter ||= [game.centerX, game.centerY]
+    game.gridSize       ||= 1000
+    game.lineQuantity   ||= 50
+    game.gridX          ||= []
+    game.gridY          ||= []
+    game.filled_squares ||= []
+    game.grid_border    ||= [390, 140, 500, 500]
+
+    get_grid unless game.tempX == 0
     determineTileCords unless game.tempX == 0
+    
 
   end
 
@@ -54,62 +65,66 @@ class PaintApp
   def horizontal_seperator y, x, x2
     [x, y, x2, y, 150, 150, 150]
   end
-
-  def vertical_seperator x, y, y2
-    [x, y, x, y2, 150, 150, 150]
-  end
-
-  def add_grid
-    x, y, h, w = 640 - 500/2, 640 - 500, 500, 500
-    lines_h = 50
-    lines_v = 50
-    
-    game.grid_border    ||= [ x, y, h, w ]
-    game.centerX        ||= x + (w / 2)
-    game.centerY        ||= y + (h / 2)
-    #game.centerLimitsX  ||= [(x / 2) + (w / 2), (x / 2) + w]
-    #game.centerLimitsY  ||= [y / 2]
-    game.grid_lines     ||= draw_grid(x / 2, y / 2, h + y, w + x, lines_h, lines_v)  
-    game.filled_squares ||= []
-
-    outputs.lines.concat game.grid_lines      
+  
+  def add_grid 
     outputs.borders << game.grid_border
-    #outputs.sprites.concat game.filled_squares
-    game.filled_squares.map do
-      |x, y, w, h, sprite|
-      if x > game.centerX - game.grid_border[3] / 2 && x < game.centerX + game.grid_border[3] / 2 &&
-         y > game.centerY - game.grid_border[2] / 2 && y < game.centerX + game.grid_border[2] / 2
-        outputs.sprites << [x, y, w, h, sprite]
+    temp = 0
+    game.gridX.map do
+      |x|
+      temp += 1
+      if x >= game.centerX - (game.grid_border[2] / 2) && x <= game.centerX + (game.grid_border[2] / 2)
+        delta = game.centerX - 640
+        outputs.lines << [x - delta, game.grid_border[1], x - delta, game.grid_border[1] + game.grid_border[2], 150, 150, 150]
+        if temp % 2 == 0
+            outputs.labels << [x - delta - 10, 140, temp.to_s]
+        else
+            outputs.labels << [x - delta - 10, 160 + game.grid_border[2], temp.to_s]
+        end
       end
     end
+    temp = 0
+    game.gridY.map do
+      |y|
+      temp += 1
+      if y >= game.centerY - (game.grid_border[3] / 2) && y <= game.centerY + (game.grid_border[3] / 2)
+        delta = game.centerY - 390
+        outputs.lines << [game.grid_border[0], y - delta, game.grid_border[0] + game.grid_border[3], y - delta, 150, 150, 150]
+        if temp % 2 == 0
+            outputs.labels << [380, y - delta - 10, temp.to_s]
+        else
+            outputs.labels << [380 + game.grid_border[2], y - delta - 10, temp.to_s]
+        end
+      end
+    end
+
+    game.filled_squares.map do
+      |x, y, w, h, sprite|
+      #if x > game.centerX - game.grid_border[3] / 2 && x < game.centerX + game.grid_border[3] / 2 &&
+      #   y > game.centerY - game.grid_border[2] / 2 && y < game.centerX + game.grid_border[2] / 2
+      #  outputs.sprites << [x, y, w, h, sprite]
+      #end
+    
+    end
   end
 
-  def draw_grid x, y, h, w, lines_h, lines_v
-    grid = []
+  def get_grid
+    curr_x = game.centerX - (game.gridSize / 2)
+    deltaX = game.gridSize / game.lineQuantity
+    (game.lineQuantity + 2).times do
+      game.gridX << curr_x
+      curr_x += deltaX
+    end
 
-    curr_y = y #start at the bottom of the box
-    dist_y = h / (lines_h + 1)
-    lines_h.times do
-      curr_y += dist_y
-      grid << horizontal_seperator(curr_y, game.grid_border[0], w) unless
-        curr_y < game.centerY - game.grid_border[2] / 2 ||
-        curr_y > game.centerY + game.grid_border[2] / 2
+    curr_y = game.centerY - (game.gridSize / 2)
+    deltaY = game.gridSize / game.lineQuantity
+    (game.lineQuantity + 2).times do
+      game.gridY << curr_y
+      curr_y += deltaY
     end
     
-    curr_x = x #now start at the left of the box
-    dist_x = w / (lines_v + 1)
-    lines_v.times do 
-      curr_x += dist_x
-      grid << vertical_seperator(curr_x, game.grid_border[1], h) unless
-        curr_x < game.centerX - game.grid_border[3] / 2 ||
-        curr_x > game.centerX + game.grid_border[3] / 2
-    end
-
-    game.paint_grid ||= {"x" => x, "y" => y, "h" => h, "w" => w, "lines_h" => lines_h,
-                   "lines_y" => lines_v, "dist_x" => dist_x,
-                   "dist_y" => dist_y }
-
-    return grid
+    #game.paint_grid ||= {"x" => x, "y" => y, "h" => h, "w" => w, "lines_h" => lines_h,
+    #               "lines_y" => lines_v, "dist_x" => dist_x,
+    #              "dist_y" => dist_y }
   end
 
   def check_click
@@ -140,17 +155,20 @@ class PaintApp
     end
     
     if ((inputs.mouse.click) && (inputs.mouse.click.point.inside_rect? game.grid_border))
-      search_lines(inputs.mouse.click.point, :click)
+      #search_lines(inputs.mouse.click.point, :click)
 
     elsif ((game.mouse_dragging) && (inputs.mouse.position.inside_rect? game.grid_border))
-      search_lines(inputs.mouse.position, :drag)
+      #search_lines(inputs.mouse.position, :drag)
     end
 
-    game.centerX += game.speed if inputs.keyboard.key_held.d
-    game.centerX -= game.speed if inputs.keyboard.key_held.a
-    game.centerY += game.speed if inputs.keyboard.key_held.w
-    game.centerY -= game.speed if inputs.keyboard.key_held.s
-
+    game.centerX += game.speed if inputs.keyboard.key_held.d &&
+                                  (game.centerX + game.speed) < game.originalCenter[0] + (game.grid_border[2] / 2)
+    game.centerX -= game.speed if inputs.keyboard.key_held.a &&
+                                  (game.centerX - game.speed) > game.originalCenter[0] - (game.grid_border[2] / 2)
+    game.centerY += game.speed if inputs.keyboard.key_held.w &&
+                                  (game.centerY + game.speed) < game.originalCenter[1] + (game.grid_border[3] / 2)
+    game.centerY -= game.speed if inputs.keyboard.key_held.s &&
+                                  (game.centerY - game.speed) > game.originalCenter[1] - (game.grid_border[3] / 2)
   end
 
   def search_lines (point, input_type)
