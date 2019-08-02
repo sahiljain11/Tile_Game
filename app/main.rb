@@ -4,7 +4,6 @@ class PaintApp
   def tick
     defaults
     render
-    add_grid
     check_click
     draw_buttons
   end
@@ -22,6 +21,7 @@ class PaintApp
     game.originalCenter ||= [game.centerX, game.centerY]
     game.gridSize       ||= 1000
     game.lineQuantity   ||= 50
+    game.increment      ||= game.gridSize / game.lineQuantity
     game.gridX          ||= []
     game.gridY          ||= []
     game.filled_squares ||= []
@@ -29,8 +29,7 @@ class PaintApp
 
     get_grid unless game.tempX == 0
     determineTileCords unless game.tempX == 0
-    
-
+    game.tempX = 0
   end
 
   def determineTileCords
@@ -44,15 +43,16 @@ class PaintApp
         game.tempY -= 75
       end
     end
-    game.tempX = 0
   end
 
   def render
-    print_title
     outputs.sprites += game.tileCords.map do
       |x, y, order|
       [x, y, game.tileSize, game.tileSize, 'sprites/image' + order.to_s + ".png"]
     end
+    outputs.solids << [0, 0, 1280, 720, 255, 255, 255]
+    add_grid
+    print_title
   end
 
   def print_title
@@ -75,11 +75,6 @@ class PaintApp
       if x >= game.centerX - (game.grid_border[2] / 2) && x <= game.centerX + (game.grid_border[2] / 2)
         delta = game.centerX - 640
         outputs.lines << [x - delta, game.grid_border[1], x - delta, game.grid_border[1] + game.grid_border[2], 150, 150, 150]
-        if temp % 2 == 0
-            outputs.labels << [x - delta - 10, 140, temp.to_s]
-        else
-            outputs.labels << [x - delta - 10, 160 + game.grid_border[2], temp.to_s]
-        end
       end
     end
     temp = 0
@@ -89,19 +84,30 @@ class PaintApp
       if y >= game.centerY - (game.grid_border[3] / 2) && y <= game.centerY + (game.grid_border[3] / 2)
         delta = game.centerY - 390
         outputs.lines << [game.grid_border[0], y - delta, game.grid_border[0] + game.grid_border[3], y - delta, 150, 150, 150]
-        if temp % 2 == 0
-            outputs.labels << [380, y - delta - 10, temp.to_s]
-        else
-            outputs.labels << [380 + game.grid_border[2], y - delta - 10, temp.to_s]
-        end
       end
     end
 
     game.filled_squares.map do
       |x, y, w, h, sprite|
-      outputs.sprites << [x, y, w, h, sprite]
-    
+      if x >= game.centerX - (game.grid_border[2] / 2) && x <= game.centerX + (game.grid_border[2] / 2) &&
+         y >= game.centerY - (game.grid_border[3] / 2) + 19 && y <= game.centerY + (game.grid_border[3] / 2) + 25
+        outputs.sprites << [x - game.centerX + 630, y - game.centerY + 360, w, h, sprite]
+      end
     end
+    outputs.primitives << [:solids, game.grid_border[0] - game.increment,
+                           game.grid_border[1] - game.increment, game.increment, game.grid_border[3] + (game.increment * 2),
+                           255, 255, 255]
+
+    outputs.primitives << [:solids, game.grid_border[0] + game.grid_border[2],
+                           game.grid_border[1] - game.increment, game.increment, game.grid_border[3] + (game.increment * 2),
+                           255, 255, 255]
+
+    outputs.primitives << [:solids, game.grid_border[0] - game.increment, game.grid_border[1] - game.increment,
+                           game.grid_border[2] + (2 * game.increment), game.increment, 255, 255, 255]
+
+    outputs.primitives << [:solids, game.grid_border[0] - game.increment, game.grid_border[1] + game.grid_border[3],
+                           game.grid_border[2] + (2 * game.increment), game.increment, 255, 255, 255]
+
   end
 
   def get_grid
@@ -166,18 +172,23 @@ class PaintApp
   end
 
   def search_lines (point, input_type)
-    point.x -= game.grid_border[0]
-    point.y -= game.grid_border[1]
-
+    point.x += game.centerX - 630
+    point.y += game.centerY - 360
+    findX = 0
+    findY = 0
     increment = game.gridSize / game.lineQuantity
-    point.x = (point.x / increment).floor * increment
-    point.y = (point.y / increment).floor * increment
+    
+    game.gridX.map do
+      |x|
+      findX = x + 10 if point.x < (x + 10) && findX == 0
+    end
 
-    point.x += game.grid_border[0]
-    point.y += game.grid_border[1]
-
-    grid_box = [ point.x, point.y, increment.ceil, increment.ceil, "sprites/image" + game.tileSelected.to_s + ".png"]
-    puts point.x.to_s + "           " + point.y.to_s
+    game.gridY.map do
+      |y|
+      findY = y + 10 if point.y < (y + 10) && findY == 0
+    end
+    grid_box = [findX - (increment.ceil), findY - (increment.ceil), increment.ceil, increment.ceil,
+                "sprites/image" + game.tileSelected.to_s + ".png"]
 
     if input_type == :click
       if game.filled_squares.include? grid_box
