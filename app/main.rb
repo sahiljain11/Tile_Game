@@ -4,7 +4,6 @@ class PaintApp
   def tick
     defaults
     render
-    print_title
     add_grid
     check_click
     draw_buttons
@@ -49,6 +48,7 @@ class PaintApp
   end
 
   def render
+    print_title
     outputs.sprites += game.tileCords.map do
       |x, y, order|
       [x, y, game.tileSize, game.tileSize, 'sprites/image' + order.to_s + ".png"]
@@ -99,10 +99,7 @@ class PaintApp
 
     game.filled_squares.map do
       |x, y, w, h, sprite|
-      #if x > game.centerX - game.grid_border[3] / 2 && x < game.centerX + game.grid_border[3] / 2 &&
-      #   y > game.centerY - game.grid_border[2] / 2 && y < game.centerX + game.grid_border[2] / 2
-      #  outputs.sprites << [x, y, w, h, sprite]
-      #end
+      outputs.sprites << [x, y, w, h, sprite]
     
     end
   end
@@ -122,9 +119,6 @@ class PaintApp
       curr_y += deltaY
     end
     
-    #game.paint_grid ||= {"x" => x, "y" => y, "h" => h, "w" => w, "lines_h" => lines_h,
-    #               "lines_y" => lines_v, "dist_x" => dist_x,
-    #              "dist_y" => dist_y }
   end
 
   def check_click
@@ -155,10 +149,10 @@ class PaintApp
     end
     
     if ((inputs.mouse.click) && (inputs.mouse.click.point.inside_rect? game.grid_border))
-      #search_lines(inputs.mouse.click.point, :click)
+      search_lines(inputs.mouse.click.point, :click)
 
     elsif ((game.mouse_dragging) && (inputs.mouse.position.inside_rect? game.grid_border))
-      #search_lines(inputs.mouse.position, :drag)
+      search_lines(inputs.mouse.position, :drag)
     end
 
     game.centerX += game.speed if inputs.keyboard.key_held.d &&
@@ -172,17 +166,18 @@ class PaintApp
   end
 
   def search_lines (point, input_type)
-    point.x -= game.paint_grid["x"]
-    point.y -= game.paint_grid["y"]
+    point.x -= game.grid_border[0]
+    point.y -= game.grid_border[1]
 
-    point.x = (point.x / game.paint_grid["dist_x"]).floor * game.paint_grid["dist_x"]
-    point.y = (point.y / game.paint_grid["dist_y"]).floor * game.paint_grid["dist_y"]
+    increment = game.gridSize / game.lineQuantity
+    point.x = (point.x / increment).floor * increment
+    point.y = (point.y / increment).floor * increment
 
-    point.x += game.paint_grid["x"]
-    point.y += game.paint_grid["y"]
+    point.x += game.grid_border[0]
+    point.y += game.grid_border[1]
 
-    grid_box = [ point.x, point.y, game.paint_grid["dist_x"].ceil, game.paint_grid["dist_y"].ceil,
-                 "sprites/image" + game.tileSelected.to_s + ".png"]
+    grid_box = [ point.x, point.y, increment.ceil, increment.ceil, "sprites/image" + game.tileSelected.to_s + ".png"]
+    puts point.x.to_s + "           " + point.y.to_s
 
     if input_type == :click
       if game.filled_squares.include? grid_box
