@@ -19,7 +19,7 @@ class PaintApp
     game.centerX        ||= 4000
     game.centerY        ||= 4000
     game.originalCenter ||= [game.centerX, game.centerY]
-    game.gridSize       ||= 1000
+    game.gridSize       ||= 1600
     game.lineQuantity   ||= 50
     game.increment      ||= game.gridSize / game.lineQuantity
     game.gridX          ||= []
@@ -82,7 +82,7 @@ class PaintApp
       |y|
       temp += 1
       if y >= game.centerY - (game.grid_border[3] / 2) && y <= game.centerY + (game.grid_border[3] / 2)
-        delta = game.centerY - 390
+        delta = game.centerY - 393
         outputs.lines << [game.grid_border[0], y - delta, game.grid_border[0] + game.grid_border[3], y - delta, 150, 150, 150]
       end
     end
@@ -90,7 +90,7 @@ class PaintApp
     game.filled_squares.map do
       |x, y, w, h, sprite|
       if x >= game.centerX - (game.grid_border[2] / 2) && x <= game.centerX + (game.grid_border[2] / 2) &&
-         y >= game.centerY - (game.grid_border[3] / 2) + 19 && y <= game.centerY + (game.grid_border[3] / 2) + 25
+         y >= game.centerY - (game.grid_border[3] / 2) && y <= game.centerY + (game.grid_border[3] / 2) + 25
         outputs.sprites << [x - game.centerX + 630, y - game.centerY + 360, w, h, sprite]
       end
     end
@@ -162,13 +162,13 @@ class PaintApp
     end
 
     game.centerX += game.speed if inputs.keyboard.key_held.d &&
-                                  (game.centerX + game.speed) < game.originalCenter[0] + (game.grid_border[2] / 2)
+                                  (game.centerX + game.speed) < game.originalCenter[0] + (game.gridSize / 2) - (game.grid_border[2] / 2)
     game.centerX -= game.speed if inputs.keyboard.key_held.a &&
-                                  (game.centerX - game.speed) > game.originalCenter[0] - (game.grid_border[2] / 2)
+                                  (game.centerX - game.speed) > game.originalCenter[0] - (game.gridSize / 2) + (game.grid_border[2] / 2)
     game.centerY += game.speed if inputs.keyboard.key_held.w &&
-                                  (game.centerY + game.speed) < game.originalCenter[1] + (game.grid_border[3] / 2)
+                                  (game.centerY + game.speed) < game.originalCenter[1] + (game.gridSize / 2) - (game.grid_border[3] / 2)
     game.centerY -= game.speed if inputs.keyboard.key_held.s &&
-                                  (game.centerY - game.speed) > game.originalCenter[1] - (game.grid_border[3] / 2)
+                                  (game.centerY - game.speed) > game.originalCenter[1] - (game.gridSize / 2) + (game.grid_border[3] / 2)
   end
 
   def search_lines (point, input_type)
@@ -185,10 +185,11 @@ class PaintApp
 
     game.gridY.map do
       |y|
-      findY = y + 10 if point.y < (y + 10) && findY == 0
+      findY = y if point.y < (y) && findY == 0
     end
     grid_box = [findX - (increment.ceil), findY - (increment.ceil), increment.ceil, increment.ceil,
                 "sprites/image" + game.tileSelected.to_s + ".png"]
+    puts (findX - (increment.ceil)).to_s + "       " + (findY - increment.ceil).to_s
 
     if input_type == :click
       if game.filled_squares.include? grid_box
