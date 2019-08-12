@@ -89,7 +89,7 @@ class PaintApp
 
     game.filled_squares.map do
       |x, y, w, h, sprite|
-      if x >= game.centerX - (game.grid_border[2] / 2) && x <= game.centerX + (game.grid_border[2] / 2) &&
+      if x >= game.centerX - (game.grid_border[2] / 2) - 17 && x <= game.centerX + (game.grid_border[2] / 2) &&
          y >= game.centerY - (game.grid_border[3] / 2) && y <= game.centerY + (game.grid_border[3] / 2) + 25
         outputs.sprites << [x - game.centerX + 630, y - game.centerY + 360, w, h, sprite]
       end
@@ -189,7 +189,6 @@ class PaintApp
     end
     grid_box = [findX - (increment.ceil), findY - (increment.ceil), increment.ceil, increment.ceil,
                 "sprites/image" + game.tileSelected.to_s + ".png"]
-    puts (findX - (increment.ceil)).to_s + "       " + (findY - increment.ceil).to_s
 
     if input_type == :click
       if game.filled_squares.include? grid_box
